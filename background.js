@@ -1,5 +1,9 @@
 // 拡張機能のインストール時の処理
 console.log('=== background.js 読み込み完了 ===');
+
+// バッジ更新用のタイマー
+let badgeUpdateTimer = null;
+
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('Extension installed:', details.reason);
   
@@ -12,7 +16,72 @@ chrome.runtime.onInstalled.addListener((details) => {
       notifications: true
     }
   });
+  
+  // バッジ更新タイマーを開始
+  startBadgeUpdateTimer();
 });
+
+// バッジ更新タイマーを開始
+function startBadgeUpdateTimer() {
+  if (badgeUpdateTimer) {
+    clearInterval(badgeUpdateTimer);
+  }
+  
+  badgeUpdateTimer = setInterval(() => {
+    updateBadgeFromStorage();
+  }, 1000); // 1秒ごとに更新
+}
+
+// ストレージから状態を読み取ってバッジを更新
+function updateBadgeFromStorage() {
+  chrome.storage.local.get(['presentationState'], (result) => {
+    if (chrome.runtime.lastError) {
+      console.error('ストレージ読み取りエラー:', chrome.runtime.lastError);
+      return;
+    }
+    
+    const state = result.presentationState;
+    if (state && state.isRunning && !state.isPaused && state.timeRemaining > 0) {
+      // 開始時間から経過時間を計算
+      const startTime = new Date(state.startTime);
+      const now = new Date();
+      const elapsedSeconds = Math.floor((now - startTime) / 1000);
+      const totalSeconds = state.timeRemaining + elapsedSeconds;
+      const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
+      
+      if (remainingSeconds > 0) {
+        const minutes = Math.floor(remainingSeconds / 60);
+        const badgeText = minutes.toString();
+        
+        chrome.action.setBadgeText({
+          text: badgeText
+        }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('バッジテキスト設定エラー:', chrome.runtime.lastError);
+          }
+        });
+        
+        chrome.action.setBadgeBackgroundColor({
+          color: '#ff6b35'
+        }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('バッジ背景色設定エラー:', chrome.runtime.lastError);
+          }
+        });
+      } else {
+        // 時間切れの場合はバッジをクリア
+        chrome.action.setBadgeText({
+          text: ''
+        });
+      }
+    } else {
+      // プレゼンが実行中でない場合はバッジをクリア
+      chrome.action.setBadgeText({
+        text: ''
+      });
+    }
+  });
+}
 
 // タブが更新された時の処理
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {

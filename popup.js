@@ -169,9 +169,6 @@ class PresentationTimer {
     this.resetButton.addEventListener('click', () => this.resetSettings());
     this.pauseButton.addEventListener('click', () => this.togglePause());
     this.stopButton.addEventListener('click', () => this.stopPresentation());
-
-    
-
   }
 
   startPresentation() {
@@ -217,6 +214,15 @@ class PresentationTimer {
       const stateJson = JSON.stringify(state);
       console.log('保存するJSON:', stateJson);
       localStorage.setItem('presentationState', stateJson);
+      
+      // chrome.storage.localにも保存（background.jsでバッジ更新用）
+      chrome.storage.local.set({ presentationState: state }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('chrome.storage.local保存エラー:', chrome.runtime.lastError);
+        } else {
+          console.log('chrome.storage.localに保存完了');
+        }
+      });
       
       // 保存されたか確認
       const savedState = localStorage.getItem('presentationState');
@@ -267,6 +273,28 @@ class PresentationTimer {
     this.isPaused = !this.isPaused;
     this.pauseButton.textContent = this.isPaused ? '再開' : '一時停止';
     this.statusDiv.textContent = this.isPaused ? '一時停止中' : '再開しました';
+    
+    // 一時停止状態を保存
+    const state = {
+      isRunning: this.isRunning,
+      isPaused: this.isPaused,
+      currentSlide: this.currentSlide,
+      timeRemaining: this.timeRemaining,
+      startTime: this.startTime ? (this.startTime instanceof Date ? this.startTime.toISOString() : new Date(this.startTime).toISOString()) : null,
+      timestamp: new Date().toISOString()
+    };
+    
+    try {
+      localStorage.setItem('presentationState', JSON.stringify(state));
+      chrome.storage.local.set({ presentationState: state }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('一時停止時のchrome.storage.local保存エラー:', chrome.runtime.lastError);
+        }
+      });
+    } catch (error) {
+      console.error('一時停止時の保存エラー:', error);
+    }
+    
     this.updateBadge(); // バッジを更新
   }
 
@@ -291,6 +319,16 @@ class PresentationTimer {
     
     try {
       localStorage.setItem('presentationState', JSON.stringify(state));
+      
+      // chrome.storage.localにも保存
+      chrome.storage.local.set({ presentationState: state }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('タイムアップ時のchrome.storage.local保存エラー:', chrome.runtime.lastError);
+        } else {
+          console.log('タイムアップ時にchrome.storage.localに保存完了');
+        }
+      });
+      
       console.log('タイムアップ時に状態を保存:', state);
     } catch (error) {
       console.error('タイムアップ時の保存エラー:', error);
