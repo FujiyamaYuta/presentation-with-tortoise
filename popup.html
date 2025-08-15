@@ -119,6 +119,24 @@
       background: rgba(52, 152, 219, 0.9);
       transition: width 0.3s ease;
     }
+
+    /* モード別テーマ */
+    body.mode-settings {
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    }
+
+    body.mode-running {
+      background: linear-gradient(135deg, #0f2027 0%, #2c5364 100%);
+    }
+
+    body.mode-running .progress-fill {
+      background: rgba(46, 204, 113, 0.9);
+    }
+
+    body.mode-running .button.primary {
+      background: rgba(46, 204, 113, 0.9);
+      border-color: rgba(46, 204, 113, 1);
+    }
   </style>
 </head>
 <body>

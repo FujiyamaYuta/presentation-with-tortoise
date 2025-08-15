@@ -126,12 +126,16 @@ class PresentationTimer {
   showSettingsForm() {
     this.settingsForm.style.display = 'block';
     this.timerDisplay.style.display = 'none';
+    document.body.classList.add('mode-settings');
+    document.body.classList.remove('mode-running');
   }
 
   showTimerDisplay() {
     this.settingsForm.style.display = 'none';
     this.timerDisplay.style.display = 'block';
     this.pauseButton.textContent = this.isPaused ? '再開' : '一時停止';
+    document.body.classList.add('mode-running');
+    document.body.classList.remove('mode-settings');
   }
 
   saveSettings() {
@@ -238,7 +242,9 @@ class PresentationTimer {
     }
     
     this.startTimer();
-    this.updateBadge(); // バッジを更新
+    
+    // バッジ更新用のアラームを作成（1分ごと）
+    chrome.alarms.create("PRESENTATION_TIMER", { periodInMinutes: 1 });
     
     console.log('プレゼン開始後の状態:', {
       isRunning: this.isRunning,
@@ -259,7 +265,6 @@ class PresentationTimer {
       if (!this.isPaused) {
         this.timeRemaining--;
         this.updateDisplay();
-        this.updateBadge(); // バッジを更新
 
         if (this.timeRemaining <= 0) {
           this.stopPresentation();
@@ -294,8 +299,6 @@ class PresentationTimer {
     } catch (error) {
       console.error('一時停止時の保存エラー:', error);
     }
-    
-    this.updateBadge(); // バッジを更新
   }
 
   stopPresentation() {
@@ -335,7 +338,10 @@ class PresentationTimer {
     }
 
     this.showSettingsForm();
-    this.clearBadge(); // バッジをクリア
+    
+    // バッジ更新用のアラームをクリア
+    chrome.alarms.clear("PRESENTATION_TIMER");
+    
     this.statusDiv.textContent = 'プレゼンを停止しました';
   }
 
@@ -419,11 +425,12 @@ class PresentationTimer {
       console.log('設定画面を表示');
       this.showSettingsForm();
       this.statusDiv.textContent = '設定を入力してください';
-      this.clearBadge(); // バッジをクリア
     } else {
       console.log('タイマー画面を表示');
-      this.updateBadge(); // バッジを更新
     }
+    
+    // popupが開いているフラグを保存（backgroundの干渉回避用）
+    chrome.storage.local.set({ popupOpen: true });
     
     console.log('=== 初期化完了 ===');
   }
@@ -489,16 +496,21 @@ window.addEventListener('focus', () => {
 // ポップアップが閉じられる前の処理
 window.addEventListener('beforeunload', () => {
   console.log('ポップアップが閉じられます');
+  chrome.storage.local.set({ popupOpen: false });
 });
 
 // ページの可視性が変わった時の処理
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     console.log('ページが非表示になりました');
+    chrome.storage.local.set({ popupOpen: false });
+  } else if (document.visibilityState === 'visible') {
+    chrome.storage.local.set({ popupOpen: true });
   }
 });
 
 // ページがアンフォーカスされた時の処理
 window.addEventListener('blur', () => {
   console.log('ポップアップがアンフォーカスされました');
+  chrome.storage.local.set({ popupOpen: false });
 });

@@ -1,9 +1,6 @@
 // 拡張機能のインストール時の処理
 console.log('=== background.js 読み込み完了 ===');
 
-// バッジ更新用のタイマー
-let badgeUpdateTimer = null;
-
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('Extension installed:', details.reason);
   
@@ -16,69 +13,85 @@ chrome.runtime.onInstalled.addListener((details) => {
       notifications: true
     }
   });
-  
-  // バッジ更新タイマーを開始
-  startBadgeUpdateTimer();
 });
 
-// バッジ更新タイマーを開始
-function startBadgeUpdateTimer() {
-  if (badgeUpdateTimer) {
-    clearInterval(badgeUpdateTimer);
-  }
-  
-  badgeUpdateTimer = setInterval(() => {
+// presentationStateの変更を監視して即時反映
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  if (!changes.presentationState) return;
+
+  const newState = changes.presentationState.newValue;
+  console.log('Background: storage change detected:', newState);
+
+  if (newState && newState.isRunning) {
+    // 走行中: 即バッジ更新し、アラームを確実にセット
     updateBadgeFromStorage();
-  }, 1000); // 1秒ごとに更新
-}
+    chrome.alarms.create('PRESENTATION_TIMER', { periodInMinutes: 1 });
+  } else {
+    // 停止: バッジクリア＆アラーム解除
+    chrome.action.setBadgeText({ text: '' });
+    chrome.alarms.clear('PRESENTATION_TIMER');
+  }
+});
+
+// 起動時に実行中であればアラームをセット
+chrome.storage.local.get(['presentationState'], (res) => {
+  const state = res.presentationState;
+  if (state && state.isRunning) {
+    chrome.alarms.create('PRESENTATION_TIMER', { periodInMinutes: 1 });
+  }
+});
+
+// アラームリスナー（1分ごとにバッジを更新）
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  console.log('Background: アラーム受信:', alarm.name);
+  if (alarm.name === "PRESENTATION_TIMER") {
+    console.log('Background: アラーム実行 - バッジ更新');
+    updateBadgeFromStorage();
+  }
+});
 
 // ストレージから状態を読み取ってバッジを更新
 function updateBadgeFromStorage() {
-  chrome.storage.local.get(['presentationState'], (result) => {
+  console.log('Background: updateBadgeFromStorage 実行');
+  chrome.storage.local.get(['presentationState', 'popupOpen'], (result) => {
     if (chrome.runtime.lastError) {
       console.error('ストレージ読み取りエラー:', chrome.runtime.lastError);
       return;
     }
     
     const state = result.presentationState;
-    if (state && state.isRunning && !state.isPaused && state.timeRemaining > 0) {
-      // 開始時間から経過時間を計算
-      const startTime = new Date(state.startTime);
-      const now = new Date();
-      const elapsedSeconds = Math.floor((now - startTime) / 1000);
-      const totalSeconds = state.timeRemaining + elapsedSeconds;
-      const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
-      
-      if (remainingSeconds > 0) {
-        const minutes = Math.floor(remainingSeconds / 60);
-        const badgeText = minutes.toString();
-        
-        chrome.action.setBadgeText({
-          text: badgeText
-        }, () => {
-          if (chrome.runtime.lastError) {
-            console.error('バッジテキスト設定エラー:', chrome.runtime.lastError);
-          }
-        });
-        
-        chrome.action.setBadgeBackgroundColor({
-          color: '#ff6b35'
-        }, () => {
-          if (chrome.runtime.lastError) {
-            console.error('バッジ背景色設定エラー:', chrome.runtime.lastError);
-          }
-        });
-      } else {
-        // 時間切れの場合はバッジをクリア
-        chrome.action.setBadgeText({
-          text: ''
-        });
-      }
-    } else {
-      // プレゼンが実行中でない場合はバッジをクリア
-      chrome.action.setBadgeText({
-        text: ''
-      });
+    const popupOpen = Boolean(result.popupOpen);
+    console.log('Background: 読み取った状態:', state, 'popupOpen:', popupOpen);
+
+    // 実行中でない、または一時停止、残り0ならクリア
+    if (!state || !state.isRunning || state.isPaused || state.timeRemaining <= 0) {
+      chrome.action.setBadgeText({ text: '' });
+      chrome.alarms.clear('PRESENTATION_TIMER');
+      return;
+    }
+
+    // popup表示中は干渉しない（更新も減算もしない）
+    if (popupOpen) {
+      const minutes = Math.floor(state.timeRemaining / 60);
+      chrome.action.setBadgeText({ text: minutes.toString() });
+      chrome.action.setBadgeBackgroundColor({ color: '#ff6b35' });
+      return;
+    }
+
+    // popupが閉じている時のみ、1分ごとに残り時間を減算し、バッジ更新
+    const newRemaining = Math.max(0, state.timeRemaining - 60);
+    const minutes = Math.floor(newRemaining / 60);
+    chrome.action.setBadgeText({ text: minutes.toString() });
+    chrome.action.setBadgeBackgroundColor({ color: '#ff6b35' });
+
+    // 状態を保存（timeRemainingを更新）
+    const nextState = { ...state, timeRemaining: newRemaining };
+    chrome.storage.local.set({ presentationState: nextState });
+
+    // 残り0になったらアラーム停止
+    if (newRemaining <= 0) {
+      chrome.alarms.clear('PRESENTATION_TIMER');
     }
   });
 }
