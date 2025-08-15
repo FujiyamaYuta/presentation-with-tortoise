@@ -1,0 +1,17 @@
+{
+  "name": "presentation-with-tortoise",
+  "version": "1.0.0",
+  "description": "このプロジェクトは、Chrome拡張機能の基本的なセットアップを提供します。",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build-icons": "node convert-icons.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "sharp": "^0.34.3"
+  }
+}

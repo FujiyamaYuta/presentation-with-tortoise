@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>プレゼンツール</title>
+  <style>
+    body {
+      width: 350px;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      color: white;
+      margin: 0;
+    }
+    
+    .container {
+      text-align: center;
+    }
+    
+    h1 {
+      font-size: 20px;
+      margin-bottom: 20px;
+      font-weight: 600;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+      text-align: left;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #333;
+      box-sizing: border-box;
+    }
+    
+    input[type="number"]:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+    }
+    
+    .button {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      transition: all 0.3s ease;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .button:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+    
+    .button.primary {
+      background: rgba(52, 152, 219, 0.9);
+      border-color: rgba(52, 152, 219, 1);
+    }
+    
+    .button.primary:hover {
+      background: rgba(52, 152, 219, 1);
+    }
+    
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      font-size: 12px;
+      text-align: left;
+    }
+    
+    .timer-display {
+      font-size: 24px;
+      font-weight: bold;
+      margin: 15px 0;
+      text-align: center;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
+    .slide-info {
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0;
+      font-size: 12px;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: rgba(52, 152, 219, 0.9);
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 プレゼンツール</h1>
+    
+    <!-- 設定フォーム -->
+    <div id="settingsForm">
+      <div class="form-group">
+        <label for="slideCount">スライド数:</label>
+        <input type="number" id="slideCount" min="1" max="100" placeholder="例: 10">
+      </div>
+      
+      <div class="form-group">
+        <label for="presentationTime">プレゼン時間 (分):</label>
+        <input type="number" id="presentationTime" min="1" max="180" placeholder="例: 15">
+      </div>
+      
+      <button id="startButton" class="button primary">プレゼン開始</button>
+      <button id="resetButton" class="button">リセット</button>
+    </div>
+    
+    <!-- タイマー表示 -->
+    <div id="timerDisplay" style="display: none;">
+      <div class="timer-display" id="timeRemaining">00:00</div>
+      <div class="slide-info">
+        <span>現在のスライド: <span id="currentSlide">1</span></span>
+        <span>残りスライド: <span id="remainingSlides">0</span></span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="timeProgress"></div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="slideProgress"></div>
+      </div>
+      
+      <button id="pauseButton" class="button">一時停止</button>
+      <button id="stopButton" class="button">停止</button>
+    </div>
+    
+    <div id="status" class="status">設定を入力してください</div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
